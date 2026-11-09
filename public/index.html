@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mirage — Image Describe</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <h1>Mirage <span>describe</span></h1>
+    <code class="cmd">cactus mirage describe &lt;image&gt;</code>
+  </div>
+  <div class="top-actions">
+    <span class="pill" id="timing" title="Round-trip time">—</span>
+  </div>
+</header>
+
+<main class="workbench">
+  <div class="card leftcol">
+    <div class="drop" id="drop">
+      <input type="file" id="file" accept="image/*" />
+      <div class="drop-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L6 20"/></svg>
+      </div>
+      <div class="big">Drop image here or click to browse</div>
+      <div class="small">JPG / PNG / WebP — runs locally via cactus</div>
+    </div>
+    <div class="thumb-wrap" id="thumbWrap" hidden>
+      <div class="objlist-head"><h3>Original</h3></div>
+      <img id="thumb" alt="Original uploaded image" />
+    </div>
+    <div class="col-actions">
+      <button class="primary" id="go" disabled>Describe image</button>
+      <button class="ghost" id="clear">Clear</button>
+    </div>
+    <div class="status" id="status" role="status">No image selected.</div>
+    <div class="desc-wrap" id="descWrap" hidden>
+      <div class="objlist-head"><h3>Description</h3><span class="pill" id="descLang" hidden>—</span></div>
+      <div id="descBody"></div>
+    </div>
+  </div>
+
+  <div class="centercol">
+    <section class="card viewport" aria-label="Image viewport">
+      <div class="preview" id="preview">
+        <div class="canvas-wrap">
+          <canvas id="canvas"></canvas>
+        </div>
+        <div class="overlay-controls" id="overlayControls" role="toolbar" aria-label="Overlay layers">
+          <label><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
+          <label><input type="checkbox" id="toggleMasks" checked /> Masks</label>
+          <label><input type="checkbox" id="toggleLabels" checked /> Labels</label>
+          <label><input type="checkbox" id="toggleText" checked /> Text</label>
+          <label><input type="checkbox" id="toggleSpotlight" checked /> Spotlight</label>
+        </div>
+        <div class="viewport-foot"><span id="fname">—</span><span id="fsize">—</span></div>
+      </div>
+      <div class="preview-empty">Upload an image, then hit Describe — the preview lands here.</div>
+    </section>
+
+    <section class="card terminal" aria-label="Raw JSON output">
+      <div class="term-head">
+        <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <h2>stdout — cactus mirage describe</h2>
+        <button class="ghost sm" id="copyJson">Copy</button>
+      </div>
+      <pre id="out"><span class="empty">// Upload an image and hit “Describe image”.
+// Raw stdout from: cactus mirage describe ./your-image.jpg</span></pre>
+      <footer id="meta"></footer>
+    </section>
+  </div>
+
+  <aside class="card inspector" aria-label="Analysis inspector">
+    <div class="inspector-empty" id="inspectorEmpty">Describe an image — scene, objects, and text will land here.</div>
+    <div class="conf-row" id="confRow" hidden>
+      <div class="objlist-head"><h3>Min confidence</h3><span class="pill" id="confVal">0.00</span></div>
+      <input type="range" id="confRange" min="0" max="100" value="0" step="1" aria-label="Minimum confidence score" />
+    </div>
+    <div class="scene-wrap collapsible" id="sceneWrap" hidden>
+      <button class="collapse-head" id="sceneHead" aria-expanded="true" aria-controls="scenePills">
+        <h3>Scene</h3>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="scene-pills" id="scenePills"></div>
+    </div>
+
+    <div class="objlist-wrap collapsible" id="objListWrap" hidden>
+      <button class="collapse-head" id="objHead" aria-expanded="true" aria-controls="objList">
+        <h3>Objects</h3><span class="pill" id="objCount">—</span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <ul class="obj-list" id="objList"></ul>
+    </div>
+
+    <div class="objlist-wrap collapsible" id="textWrap" hidden>
+      <button class="collapse-head" id="textHead" aria-expanded="true" aria-controls="textList">
+        <h3>Text</h3><span class="pill" id="textCount">—</span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <ul class="obj-list" id="textList"></ul>
+    </div>
+  </aside>
+</main>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
