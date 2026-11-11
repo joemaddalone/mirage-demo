@@ -5,9 +5,11 @@
   "private": true,
   "scripts": {
     "start": "bun run index.ts",
-    "start:wasm": "bun run wasm-app/serve.ts"
+    "start:wasm": "bun run wasm-app/serve.ts",
+    "lint": "biome lint"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.6",
     "@types/bun": "latest"
   },
   "peerDependencies": {

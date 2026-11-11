@@ -10,7 +10,8 @@
 const PORT = Number(process.env.WASM_PORT || 3001);
 const ROOT = new URL("./", import.meta.url);
 const MODEL_PATH = new URL("./models/mirage.cact", import.meta.url);
-const MODEL_URL = "https://huggingface.co/Cactus-Compute/mirage/resolve/main/mirage.cact";
+const MODEL_URL =
+  "https://huggingface.co/Cactus-Compute/mirage/resolve/main/mirage.cact";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -33,9 +34,12 @@ async function ensureModel(): Promise<void> {
   if (await Bun.file(MODEL_PATH).exists()) return;
   if (!modelDownload) {
     modelDownload = (async () => {
-      console.log("mirage.cact not cached — downloading ~22 MB from Hugging Face…");
+      console.log(
+        "mirage.cact not cached — downloading ~22 MB from Hugging Face…",
+      );
       const res = await fetch(MODEL_URL);
-      if (!res.ok || !res.body) throw new Error(`model download failed: HTTP ${res.status}`);
+      if (!res.ok || !res.body)
+        throw new Error(`model download failed: HTTP ${res.status}`);
       await Bun.write(MODEL_PATH, res);
       console.log("mirage.cact cached in wasm-app/models/.");
     })().finally(() => {
@@ -70,18 +74,21 @@ Bun.serve({
       } catch (err) {
         return Response.json(
           { error: err instanceof Error ? err.message : String(err) },
-          { status: 502 }
+          { status: 502 },
         );
       }
     }
 
-    const filePath = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const filePath =
+      url.pathname === "/" ? "index.html" : url.pathname.slice(1);
     if (!ALLOWED.has(filePath)) return notFound();
     const file = Bun.file(new URL(filePath, ROOT));
-    if (!(await file.exists())) return notFound("Missing " + filePath);
+    if (!(await file.exists())) return notFound(`Missing ${filePath}`);
     const ext = filePath.slice(filePath.lastIndexOf("."));
     return new Response(file, {
-      headers: { "content-type": CONTENT_TYPES[ext] ?? "application/octet-stream" },
+      headers: {
+        "content-type": CONTENT_TYPES[ext] ?? "application/octet-stream",
+      },
     });
   },
 });

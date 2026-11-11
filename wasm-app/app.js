@@ -3,68 +3,77 @@
 // fetched once, then every describe call is a straight WebAssembly function
 // call against the image pixels we already have in a canvas.
 
-const drop = document.getElementById('drop');
-const fileInput = document.getElementById('file');
-const goBtn = document.getElementById('go');
-const clearBtn = document.getElementById('clear');
-const statusEl = document.getElementById('status');
-const outEl = document.getElementById('out');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const previewEl = document.getElementById('preview');
-const fnameEl = document.getElementById('fname');
-const fsizeEl = document.getElementById('fsize');
-const timingEl = document.getElementById('timing');
-const metaEl = document.getElementById('meta');
-const toggleBoxes = document.getElementById('toggleBoxes');
-const toggleMasks = document.getElementById('toggleMasks');
-const toggleLabels = document.getElementById('toggleLabels');
-const toggleText = document.getElementById('toggleText');
-const toggleSpotlight = document.getElementById('toggleSpotlight');
-const objListWrap = document.getElementById('objListWrap');
-const objList = document.getElementById('objList');
-const objCount = document.getElementById('objCount');
-const sceneWrap = document.getElementById('sceneWrap');
-const scenePills = document.getElementById('scenePills');
-const textWrap = document.getElementById('textWrap');
-const textList = document.getElementById('textList');
-const textCount = document.getElementById('textCount');
-const inspectorEmpty = document.getElementById('inspectorEmpty');
-const confRow = document.getElementById('confRow');
-const confRange = document.getElementById('confRange');
-const confVal = document.getElementById('confVal');
-const enginePill = document.getElementById('enginePill');
-const engineBar = document.getElementById('engineBar');
-const enginePct = document.getElementById('enginePct');
-const modelBar = document.getElementById('modelBar');
-const modelPct = document.getElementById('modelPct');
-const copyJsonBtn = document.getElementById('copyJson');
-const thumbWrap = document.getElementById('thumbWrap');
-const thumb = document.getElementById('thumb');
-const descWrap = document.getElementById('descWrap');
-const descBody = document.getElementById('descBody');
-const descLang = document.getElementById('descLang');
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+const goBtn = document.getElementById("go");
+const clearBtn = document.getElementById("clear");
+const statusEl = document.getElementById("status");
+const outEl = document.getElementById("out");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const previewEl = document.getElementById("preview");
+const fnameEl = document.getElementById("fname");
+const fsizeEl = document.getElementById("fsize");
+const timingEl = document.getElementById("timing");
+const metaEl = document.getElementById("meta");
+const toggleBoxes = document.getElementById("toggleBoxes");
+const toggleMasks = document.getElementById("toggleMasks");
+const toggleLabels = document.getElementById("toggleLabels");
+const toggleText = document.getElementById("toggleText");
+const toggleSpotlight = document.getElementById("toggleSpotlight");
+const objListWrap = document.getElementById("objListWrap");
+const objList = document.getElementById("objList");
+const objCount = document.getElementById("objCount");
+const sceneWrap = document.getElementById("sceneWrap");
+const scenePills = document.getElementById("scenePills");
+const textWrap = document.getElementById("textWrap");
+const textList = document.getElementById("textList");
+const textCount = document.getElementById("textCount");
+const inspectorEmpty = document.getElementById("inspectorEmpty");
+const confRow = document.getElementById("confRow");
+const confRange = document.getElementById("confRange");
+const confVal = document.getElementById("confVal");
+const enginePill = document.getElementById("enginePill");
+const engineBar = document.getElementById("engineBar");
+const enginePct = document.getElementById("enginePct");
+const modelBar = document.getElementById("modelBar");
+const modelPct = document.getElementById("modelPct");
+const copyJsonBtn = document.getElementById("copyJson");
+const thumbWrap = document.getElementById("thumbWrap");
+const thumb = document.getElementById("thumb");
+const descWrap = document.getElementById("descWrap");
+const descBody = document.getElementById("descBody");
+const descLang = document.getElementById("descLang");
 
 let minScore = 0;
 // Items without a numeric score always pass so unscored data stays visible.
 function passesScore(item) {
-  return !item || typeof item.score !== 'number' || item.score >= minScore;
+  return !item || typeof item.score !== "number" || item.score >= minScore;
 }
-for (const [headId, wrapId] of [['sceneHead', 'sceneWrap'], ['objHead', 'objListWrap'], ['textHead', 'textWrap']]) {
+for (const [headId, wrapId] of [
+  ["sceneHead", "sceneWrap"],
+  ["objHead", "objListWrap"],
+  ["textHead", "textWrap"],
+]) {
   const head = document.getElementById(headId);
   const wrap = document.getElementById(wrapId);
-  head.addEventListener('click', () => {
-    const collapsed = wrap.classList.toggle('collapsed');
-    head.setAttribute('aria-expanded', String(!collapsed));
+  head.addEventListener("click", () => {
+    const collapsed = wrap.classList.toggle("collapsed");
+    head.setAttribute("aria-expanded", String(!collapsed));
   });
 }
 
 function renderDescription() {
   // Pipe-separated reasoning string → one paragraph per segment.
   // A leading "lang: xx" segment becomes the header pill instead of prose.
-  const reasoning = lastResult && typeof lastResult.reasoning === 'string'
-    ? lastResult.reasoning : '';
-  const segments = reasoning.split('|').map((s) => s.trim()).filter(Boolean);
+  const reasoning =
+    lastResult && typeof lastResult.reasoning === "string"
+      ? lastResult.reasoning
+      : "";
+  const segments = reasoning
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!segments.length) {
     descWrap.hidden = true;
     return;
@@ -73,26 +82,27 @@ function renderDescription() {
   const prose = lang ? segments.slice(1) : segments;
   descLang.hidden = !lang;
   if (lang) descLang.textContent = lang[1];
-  descBody.innerHTML = '';
+  descBody.innerHTML = "";
   prose.forEach((text, i) => {
-    const p = document.createElement('p');
+    const p = document.createElement("p");
     // Last segment is usually a caveat ("cannot know…") — mute it.
-    if (i === prose.length - 1 && /^(cannot|can't|unable|unknown)/i.test(text)) p.className = 'dim';
+    if (i === prose.length - 1 && /^(cannot|can't|unable|unknown)/i.test(text))
+      p.className = "dim";
     p.textContent = text;
     descBody.appendChild(p);
   });
   descWrap.hidden = !prose.length;
 }
 
-const SCENE_KEYS = ['setting', 'lighting', 'weather', 'time_of_day'];
+const SCENE_KEYS = ["setting", "lighting", "weather", "time_of_day"];
 
 // ---------------------------------------------------------------- wasm engine
 
 // Relative so the app works from any base path (localhost, a subfolder,
 // or a GitHub Pages project site) with zero configuration.
-const ENGINE_JS = './vendor/cactus.js';
-const ENGINE_WASM = './vendor/cactus.wasm';
-const MODEL_URL = './models/mirage.cact';
+const ENGINE_JS = "./vendor/cactus.js";
+const ENGINE_WASM = "./vendor/cactus.wasm";
+const MODEL_URL = "./models/mirage.cact";
 // Mirage's output buffer; the server-side Python binding uses 16 MB too.
 const OUT_CAPACITY = 16 * 1024 * 1024;
 // Long edge handed to the model. Descriptions and boxes are resolution
@@ -108,25 +118,27 @@ const engine = {
 
 function setPill(el, text, kind) {
   el.textContent = text;
-  el.className = 'pill' + (kind ? ' ' + kind : '');
+  el.className = `pill${kind ? ` ${kind}` : ""}`;
 }
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
-    if (typeof window.createCactus === 'function') return resolve();
+    if (typeof window.createCactus === "function") return resolve();
     const existing = document.querySelector(`script[data-engine="${src}"]`);
     if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('could not load ' + src)));
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () =>
+        reject(new Error(`could not load ${src}`)),
+      );
       return;
     }
     // index.html already includes /vendor/cactus.js; this is the safety net
     // for a page that was edited without it.
-    const s = document.createElement('script');
+    const s = document.createElement("script");
     s.src = src;
     s.dataset.engine = src;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error('could not load ' + src));
+    s.onerror = () => reject(new Error(`could not load ${src}`));
     document.head.appendChild(s);
   });
 }
@@ -135,34 +147,37 @@ function loadScriptOnce(src) {
 async function fetchWithProgress(url, bar, pct, label) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
-  const total = Number(res.headers.get('content-length')) || 0;
+  const total = Number(res.headers.get("content-length")) || 0;
   if (!res.body) {
     const buf = new Uint8Array(await res.arrayBuffer());
-    bar.style.width = '100%';
-    pct.textContent = (buf.length / 1048576).toFixed(1) + ' MB';
+    bar.style.width = "100%";
+    pct.textContent = `${(buf.length / 1048576).toFixed(1)} MB`;
     return buf;
   }
   const reader = res.body.getReader();
   const chunks = [];
   let received = 0;
-  for (;;) {
+  for (; ;) {
     const { done, value } = await reader.read();
     if (done) break;
     chunks.push(value);
     received += value.length;
     if (total) {
       const f = received / total;
-      bar.style.width = (f * 100).toFixed(1) + '%';
-      pct.textContent = Math.round(f * 100) + '%';
+      bar.style.width = `${(f * 100).toFixed(1)}%`;
+      pct.textContent = `${Math.round(f * 100)}%`;
     } else {
-      pct.textContent = (received / 1048576).toFixed(1) + ' MB';
+      pct.textContent = `${(received / 1048576).toFixed(1)} MB`;
     }
   }
   const bytes = new Uint8Array(received);
   let at = 0;
-  for (const c of chunks) { bytes.set(c, at); at += c.length; }
-  bar.style.width = '100%';
-  pct.textContent = (received / 1048576).toFixed(1) + ' MB';
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.length;
+  }
+  bar.style.width = "100%";
+  pct.textContent = `${(received / 1048576).toFixed(1)} MB`;
   return bytes;
 }
 
@@ -179,37 +194,47 @@ async function ensureEngine() {
   if (engine.loading) return engine.loading;
 
   engine.loading = (async () => {
-    setPill(enginePill, 'loading', 'busy');
+    setPill(enginePill, "loading", "busy");
     await loadScriptOnce(ENGINE_JS);
 
     // Hand the .wasm bytes in ourselves so progress is visible and the file
     // is fetched exactly once (the loader would otherwise fetch it again).
-    const wasmBytes = await fetchWithProgress(ENGINE_WASM, engineBar, enginePct, 'cactus.wasm');
+    const wasmBytes = await fetchWithProgress(
+      ENGINE_WASM,
+      engineBar,
+      enginePct,
+      "cactus.wasm",
+    );
     const Module = await window.createCactus({ wasmBinary: wasmBytes });
     engine.Module = Module;
 
-    const weights = await fetchWithProgress(MODEL_URL, modelBar, modelPct, 'mirage.cact');
+    const weights = await fetchWithProgress(
+      MODEL_URL,
+      modelBar,
+      modelPct,
+      "mirage.cact",
+    );
     const ptr = Module._malloc(weights.length);
-    if (!ptr) throw new Error('out of memory allocating the model archive');
+    if (!ptr) throw new Error("out of memory allocating the model archive");
     Module.HEAPU8.set(weights, ptr);
     const code = Module._cactus_load(ptr, BigInt(weights.length));
     Module._free(ptr);
     if (code < 0) {
       const msg = Module.UTF8ToString(Module._cactus_last_error());
-      throw new Error(msg || 'cactus_load failed');
+      throw new Error(msg || "cactus_load failed");
     }
     if (!(Module._cactus_models() & CACTUS_VISION)) {
-      throw new Error('the loaded archive is not a Mirage vision model');
+      throw new Error("the loaded archive is not a Mirage vision model");
     }
     engine.ready = true;
-    setPill(enginePill, 'ready', 'ok');
+    setPill(enginePill, "ready", "ok");
     return Module;
   })();
 
   try {
     return await engine.loading;
   } catch (err) {
-    setPill(enginePill, 'failed', 'err');
+    setPill(enginePill, "failed", "err");
     throw err;
   } finally {
     engine.loading = null;
@@ -218,13 +243,16 @@ async function ensureEngine() {
 
 // Draw the image down to MAX_EDGE, then hand the model packed RGB (no alpha).
 function imageToRGB(img) {
-  const scale = Math.min(1, MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(
+    1,
+    MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight),
+  );
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
-  const off = document.createElement('canvas');
+  const off = document.createElement("canvas");
   off.width = w;
   off.height = h;
-  const offCtx = off.getContext('2d', { willReadFrequently: true });
+  const offCtx = off.getContext("2d", { willReadFrequently: true });
   offCtx.drawImage(img, 0, 0, w, h);
   const rgba = offCtx.getImageData(0, 0, w, h).data;
   const rgb = new Uint8Array(w * h * 3);
@@ -241,17 +269,26 @@ async function describeInTab(img) {
   const { rgb, w, h } = imageToRGB(img);
 
   const rgbPtr = Module._malloc(rgb.length);
-  const optsPtr = writeCString(Module, '{}');
+  const optsPtr = writeCString(Module, "{}");
   const outPtr = Module._malloc(OUT_CAPACITY);
   try {
-    if (!rgbPtr || !outPtr) throw new Error('out of memory');
+    if (!rgbPtr || !outPtr) throw new Error("out of memory");
     // Re-read HEAPU8 after every malloc — growing the heap swaps the buffer.
     Module.HEAPU8.set(rgb, rgbPtr);
     // Positive return is the output byte count; negative is a failure.
-    const code = Module._cactus_describe(rgbPtr, w, h, optsPtr, 0, 0, outPtr, OUT_CAPACITY);
+    const code = Module._cactus_describe(
+      rgbPtr,
+      w,
+      h,
+      optsPtr,
+      0,
+      0,
+      outPtr,
+      OUT_CAPACITY,
+    );
     if (code < 0) {
       const msg = Module.UTF8ToString(Module._cactus_last_error());
-      throw new Error(msg || 'cactus_describe failed');
+      throw new Error(msg || "cactus_describe failed");
     }
     const json = Module.UTF8ToString(outPtr);
     return { result: JSON.parse(json), inputW: w, inputH: h };
@@ -273,12 +310,20 @@ let selectedIndex = -1;
 let hoveredTextIndex = -1;
 
 const PALETTE = [
-  '#6ea8fe', '#3dd68c', '#ffb224', '#ff6369', '#c792ea',
-  '#22d3ee', '#f472b6', '#a3e635', '#fb923c', '#e879f9',
+  "#6ea8fe",
+  "#3dd68c",
+  "#ffb224",
+  "#ff6369",
+  "#c792ea",
+  "#22d3ee",
+  "#f472b6",
+  "#a3e635",
+  "#fb923c",
+  "#e879f9",
 ];
 
-function setStatus(msg, kind = '') {
-  statusEl.className = 'status ' + kind;
+function setStatus(msg, kind = "") {
+  statusEl.className = `status ${kind}`;
   statusEl.innerHTML = msg;
 }
 
@@ -288,7 +333,9 @@ function colorFor(i) {
 
 function hexToRgba(hex, alpha) {
   const n = parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const r = (n >> 16) & 255,
+    g = (n >> 8) & 255,
+    b = n & 255;
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
@@ -307,7 +354,8 @@ function objectPath(obj, w, h) {
     for (let k = 0; k + 1 < obj.mask.length; k += 2) {
       const px = (obj.mask[k] / 1000) * w;
       const py = (obj.mask[k + 1] / 1000) * h;
-      if (k === 0) p.moveTo(px, py); else p.lineTo(px, py);
+      if (k === 0) p.moveTo(px, py);
+      else p.lineTo(px, py);
     }
     p.closePath();
     return p;
@@ -325,15 +373,15 @@ function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Could not decode image.'));
+    img.onerror = () => reject(new Error("Could not decode image."));
     img.src = url;
   });
 }
 
 function syncActiveList() {
   const active = hoveredIndex >= 0 ? hoveredIndex : selectedIndex;
-  objList.querySelectorAll('.obj-item').forEach((li) => {
-    li.classList.toggle('active', Number(li.dataset.index) === active);
+  objList.querySelectorAll(".obj-item").forEach((li) => {
+    li.classList.toggle("active", Number(li.dataset.index) === active);
   });
 }
 
@@ -347,17 +395,17 @@ function setHovered(i) {
 function describeBits(obj) {
   const bits = [];
   if (obj.position) bits.push(obj.position);
-  if (obj.description && typeof obj.description === 'object') {
-    ['color', 'shape', 'state', 'material'].forEach((k) => {
+  if (obj.description && typeof obj.description === "object") {
+    ["color", "shape", "state", "material"].forEach((k) => {
       if (obj.description[k]) bits.push(obj.description[k]);
     });
   }
-  return bits.join(' · ');
+  return bits.join(" · ");
 }
 
 function renderScene() {
-  const scene = (lastResult && lastResult.scene) || null;
-  scenePills.innerHTML = '';
+  const scene = lastResult?.scene || null;
+  scenePills.innerHTML = "";
   if (!scene) {
     sceneWrap.hidden = true;
     return;
@@ -369,14 +417,17 @@ function renderScene() {
     ...Object.keys(scene).filter((k) => !SCENE_KEYS.includes(k) && scene[k]),
   ];
   const pills = ordered.map((k) => {
-    const pill = document.createElement('span');
-    pill.className = 'scene-pill';
-    const key = document.createElement('span');
-    key.className = 'k';
-    key.textContent = k.replace(/_/g, ' ');
-    const val = document.createElement('span');
-    val.className = 'v';
-    val.textContent = typeof scene[k] === 'object' ? JSON.stringify(scene[k]) : String(scene[k]);
+    const pill = document.createElement("span");
+    pill.className = "scene-pill";
+    const key = document.createElement("span");
+    key.className = "k";
+    key.textContent = k.replace(/_/g, " ");
+    const val = document.createElement("span");
+    val.className = "v";
+    val.textContent =
+      typeof scene[k] === "object"
+        ? JSON.stringify(scene[k])
+        : String(scene[k]);
     pill.append(key, val);
     return pill;
   });
@@ -389,8 +440,8 @@ function renderScene() {
 }
 
 function renderObjList() {
-  const objects = (lastResult && lastResult.objects) || [];
-  objList.innerHTML = '';
+  const objects = lastResult?.objects || [];
+  objList.innerHTML = "";
   if (!objects.length) {
     objListWrap.hidden = true;
     return;
@@ -400,29 +451,30 @@ function renderObjList() {
   objects.forEach((obj, i) => {
     if (!passesScore(obj)) return;
     shown++;
-    const li = document.createElement('li');
-    li.className = 'obj-item';
+    const li = document.createElement("li");
+    li.className = "obj-item";
     li.dataset.index = String(i);
     const color = colorFor(i);
-    const score = typeof obj.score === 'number' ? obj.score.toFixed(2) : '—';
+    const score = typeof obj.score === "number" ? obj.score.toFixed(2) : "—";
     const bits = describeBits(obj);
     li.innerHTML = `<span class="dot"></span><span class="name"></span><span class="meta"></span>`;
-    li.querySelector('.dot').style.background = color;
-    li.querySelector('.name').textContent = obj.name || 'object';
-    li.querySelector('.meta').textContent = score + (bits ? ' · ' + bits : '');
-    li.title = bits || obj.name || 'object';
-    li.addEventListener('mouseenter', () => setHovered(i));
-    li.addEventListener('mouseleave', () => setHovered(-1));
-    li.addEventListener('click', () => {
+    li.querySelector(".dot").style.background = color;
+    li.querySelector(".name").textContent = obj.name || "object";
+    li.querySelector(".meta").textContent = score + (bits ? ` · ${bits}` : "");
+    li.title = bits || obj.name || "object";
+    li.addEventListener("mouseenter", () => setHovered(i));
+    li.addEventListener("mouseleave", () => setHovered(-1));
+    li.addEventListener("click", () => {
       selectedIndex = selectedIndex === i ? -1 : i;
       syncActiveList();
       redraw();
     });
     objList.appendChild(li);
   });
-  objCount.textContent = shown < objects.length
-    ? shown + ' of ' + objects.length + ' objects'
-    : objects.length + (objects.length === 1 ? ' object' : ' objects');
+  objCount.textContent =
+    shown < objects.length
+      ? `${shown} of ${objects.length} objects`
+      : objects.length + (objects.length === 1 ? " object" : " objects");
   syncActiveList();
 }
 
@@ -431,14 +483,16 @@ async function copyString(s) {
     await navigator.clipboard.writeText(s);
     return true;
   } catch {
-    const ta = document.createElement('textarea');
+    const ta = document.createElement("textarea");
     ta.value = s;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
     document.body.appendChild(ta);
     ta.select();
     let ok = false;
-    try { ok = document.execCommand('copy'); } catch {}
+    try {
+      ok = document.execCommand("copy");
+    } catch { }
     ta.remove();
     return ok;
   }
@@ -447,15 +501,15 @@ async function copyString(s) {
 function setHoveredText(i) {
   if (i === hoveredTextIndex) return;
   hoveredTextIndex = i;
-  textList.querySelectorAll('.obj-item').forEach((li) => {
-    li.classList.toggle('active', Number(li.dataset.index) === i);
+  textList.querySelectorAll(".obj-item").forEach((li) => {
+    li.classList.toggle("active", Number(li.dataset.index) === i);
   });
   redraw();
 }
 
 function renderTextList() {
-  const texts = (lastResult && lastResult.text) || [];
-  textList.innerHTML = '';
+  const texts = lastResult?.text || [];
+  textList.innerHTML = "";
   hoveredTextIndex = -1;
   if (!texts.length) {
     textWrap.hidden = true;
@@ -467,28 +521,35 @@ function renderTextList() {
   texts.forEach((t, i) => {
     if (!passesScore(t)) return;
     shownText++;
-    const li = document.createElement('li');
-    li.className = 'obj-item text-item';
+    const li = document.createElement("li");
+    li.className = "obj-item text-item";
     li.dataset.index = String(i);
-    li.title = (t.string || '') + (t.string ? ' — click to copy' : 'Click to copy');
+    li.title =
+      (t.string || "") + (t.string ? " — click to copy" : "Click to copy");
     li.innerHTML = `<span class="quote">&ldquo;</span><span class="name"></span><span class="quote">&rdquo;</span><span class="meta"></span>`;
-    li.querySelector('.name').textContent = t.string || '(unreadable)';
-    li.querySelector('.meta').textContent = typeof t.score === 'number' ? t.score.toFixed(2) + ' · click to copy' : 'click to copy';
-    li.addEventListener('mouseenter', () => setHoveredText(i));
-    li.addEventListener('mouseleave', () => setHoveredText(-1));
-    li.addEventListener('click', async () => {
+    li.querySelector(".name").textContent = t.string || "(unreadable)";
+    li.querySelector(".meta").textContent =
+      typeof t.score === "number"
+        ? `${t.score.toFixed(2)} · click to copy`
+        : "click to copy";
+    li.addEventListener("mouseenter", () => setHoveredText(i));
+    li.addEventListener("mouseleave", () => setHoveredText(-1));
+    li.addEventListener("click", async () => {
       if (!t.string) return;
       const ok = await copyString(t.string);
-      const meta = li.querySelector('.meta');
+      const meta = li.querySelector(".meta");
       const orig = meta.textContent;
-      meta.textContent = ok ? 'copied ✓' : 'copy failed';
-      setTimeout(() => { meta.textContent = orig; }, 1200);
+      meta.textContent = ok ? "copied ✓" : "copy failed";
+      setTimeout(() => {
+        meta.textContent = orig;
+      }, 1200);
     });
     textList.appendChild(li);
   });
-  textCount.textContent = shownText < texts.length
-    ? shownText + ' of ' + texts.length + ' strings'
-    : texts.length + (texts.length === 1 ? ' string' : ' strings');
+  textCount.textContent =
+    shownText < texts.length
+      ? `${shownText} of ${texts.length} strings`
+      : texts.length + (texts.length === 1 ? " string" : " strings");
   syncInspector();
 }
 
@@ -496,14 +557,14 @@ function syncInspector() {
   // renderTextList always runs last after the other panels update, so one
   // sync point here covers describe / select / clear.
   inspectorEmpty.style.display =
-    (sceneWrap.hidden && objListWrap.hidden && textWrap.hidden) ? '' : 'none';
+    sceneWrap.hidden && objListWrap.hidden && textWrap.hidden ? "" : "none";
   confRow.hidden = !lastResult;
 }
 
 function pickObjectAt(nx, ny) {
   // Normalized 0–1000 point → smallest containing bbox wins (beats big
   // background regions like grass covering smaller objects).
-  const objects = (lastResult && lastResult.objects) || [];
+  const objects = lastResult?.objects || [];
   let best = -1;
   let bestArea = Infinity;
   objects.forEach((obj, i) => {
@@ -512,23 +573,27 @@ function pickObjectAt(nx, ny) {
     const [x1, y1, x2, y2] = obj.bbox;
     if (nx < x1 || nx > x2 || ny < y1 || ny > y2) return;
     const area = (x2 - x1) * (y2 - y1);
-    if (area < bestArea) { bestArea = area; best = i; }
+    if (area < bestArea) {
+      bestArea = area;
+      best = i;
+    }
   });
   return best;
 }
 
-canvas.addEventListener('mousemove', (e) => {
+canvas.addEventListener("mousemove", (e) => {
   if (!loadedImage || !lastResult) return;
   const rect = canvas.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return;
   const nx = ((e.clientX - rect.left) / rect.width) * 1000;
   const ny = ((e.clientY - rect.top) / rect.height) * 1000;
   setHovered(pickObjectAt(nx, ny));
-  canvas.style.cursor = hoveredIndex >= 0 ? 'pointer' : 'default';
+  canvas.style.cursor = hoveredIndex >= 0 ? "pointer" : "default";
 });
-canvas.addEventListener('mouseleave', () => setHovered(-1));
-canvas.addEventListener('click', () => {
-  selectedIndex = hoveredIndex >= 0 && selectedIndex !== hoveredIndex ? hoveredIndex : -1;
+canvas.addEventListener("mouseleave", () => setHovered(-1));
+canvas.addEventListener("click", () => {
+  selectedIndex =
+    hoveredIndex >= 0 && selectedIndex !== hoveredIndex ? hoveredIndex : -1;
   syncActiveList();
   redraw();
 });
@@ -553,13 +618,13 @@ async function redraw() {
     // A selected object below the confidence threshold gets no cutout.
     const cutout = passesScore(sel) ? objectPath(sel, w, h) : null;
     if (cutout) {
-      const dim = document.createElement('canvas');
+      const dim = document.createElement("canvas");
       dim.width = w;
       dim.height = h;
-      const dctx = dim.getContext('2d');
-      dctx.fillStyle = 'rgba(4,7,14,0.62)';
+      const dctx = dim.getContext("2d");
+      dctx.fillStyle = "rgba(4,7,14,0.62)";
       dctx.fillRect(0, 0, w, h);
-      dctx.globalCompositeOperation = 'destination-out';
+      dctx.globalCompositeOperation = "destination-out";
       dctx.fill(cutout);
       ctx.drawImage(dim, 0, 0);
       // Crisp rim around the cutout so the edge reads on any background.
@@ -580,7 +645,7 @@ async function redraw() {
   // Scale label font with image size so small thumbs stay readable-ish.
   const fontSize = Math.max(12, Math.round(w / 42));
   ctx.font = `600 ${fontSize}px -apple-system, Inter, Segoe UI, sans-serif`;
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = "top";
 
   const objects = lastResult.objects || [];
   const activeIndex = hoveredIndex >= 0 ? hoveredIndex : selectedIndex;
@@ -597,13 +662,16 @@ async function redraw() {
       for (let k = 0; k + 1 < obj.mask.length; k += 2) {
         const px = (obj.mask[k] / 1000) * w;
         const py = (obj.mask[k + 1] / 1000) * h;
-        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        if (k === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
       }
       ctx.closePath();
       ctx.fillStyle = hexToRgba(color, isActive ? 0.5 : 0.28);
       ctx.fill();
       ctx.strokeStyle = hexToRgba(color, 0.9);
-      ctx.lineWidth = isActive ? Math.max(3, Math.round(w / 160)) : Math.max(1.5, Math.round(w / 320));
+      ctx.lineWidth = isActive
+        ? Math.max(3, Math.round(w / 160))
+        : Math.max(1.5, Math.round(w / 320));
       ctx.stroke();
       ctx.restore();
     });
@@ -619,12 +687,14 @@ async function redraw() {
     if (activeIndex >= 0 && !isActive) ctx.globalAlpha = 0.3;
     if (showBoxes) {
       ctx.strokeStyle = color;
-      ctx.lineWidth = isActive ? Math.max(4, Math.round(w / 140)) : Math.max(2, Math.round(w / 220));
+      ctx.lineWidth = isActive
+        ? Math.max(4, Math.round(w / 140))
+        : Math.max(2, Math.round(w / 220));
       ctx.strokeRect(px1, py1, px2 - px1, py2 - py1);
     }
 
     if (showLabels || isActive) {
-      const label = `${obj.name || 'object'}${typeof obj.score === 'number' ? ` ${obj.score.toFixed(2)}` : ''}`;
+      const label = `${obj.name || "object"}${typeof obj.score === "number" ? ` ${obj.score.toFixed(2)}` : ""}`;
       const pad = 5;
       const textW = ctx.measureText(label).width;
       const boxH = fontSize + pad * 2;
@@ -632,7 +702,7 @@ async function redraw() {
       if (by < 0) by = py1 + 3;
       ctx.fillStyle = color;
       ctx.fillRect(px1, by, textW + pad * 2, boxH);
-      ctx.fillStyle = '#081226';
+      ctx.fillStyle = "#081226";
       ctx.fillText(label, px1 + pad, by + pad);
     }
     ctx.restore();
@@ -645,21 +715,22 @@ async function redraw() {
       if (!t || !Array.isArray(t.bbox) || t.bbox.length !== 4) return;
       if (!passesScore(t)) return;
       const [px1, py1, px2, py2] = toPixels(t.bbox, w, h);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = ti === hoveredTextIndex
-        ? Math.max(3, Math.round(w / 140))
-        : Math.max(1.5, Math.round(w / 320));
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth =
+        ti === hoveredTextIndex
+          ? Math.max(3, Math.round(w / 140))
+          : Math.max(1.5, Math.round(w / 320));
       ctx.strokeRect(px1, py1, px2 - px1, py2 - py1);
       if (showLabels && t.string) {
-        const label = `“${t.string}”${typeof t.score === 'number' ? ` ${t.score.toFixed(2)}` : ''}`;
+        const label = `“${t.string}”${typeof t.score === "number" ? ` ${t.score.toFixed(2)}` : ""}`;
         const pad = 4;
         const textW = ctx.measureText(label).width;
         const boxH = fontSize + pad * 2;
         let by = py2 + 3;
         if (by + boxH > h) by = py1 - boxH - 3;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = "#ffffff";
         ctx.fillRect(px1, by, textW + pad * 2, boxH);
-        ctx.fillStyle = '#111';
+        ctx.fillStyle = "#111";
         ctx.fillText(label, px1 + pad, by + pad);
       }
     });
@@ -669,8 +740,8 @@ async function redraw() {
 
 async function selectFile(f) {
   if (!f) return;
-  if (!f.type.startsWith('image/')) {
-    setStatus('That file is not an image. Pick a JPG/PNG/WebP.', 'err');
+  if (!f.type.startsWith("image/")) {
+    setStatus("That file is not an image. Pick a JPG/PNG/WebP.", "err");
     return;
   }
   file = f;
@@ -689,54 +760,68 @@ async function selectFile(f) {
     loadedImage = await loadImage(objectUrl);
     await redraw();
   } catch (err) {
-    setStatus('Error: ' + err.message, 'err');
+    setStatus(`Error: ${err.message}`, "err");
     return;
   }
-  previewEl.classList.add('show');
+  previewEl.classList.add("show");
   fnameEl.textContent = f.name;
-  fsizeEl.textContent = (f.size / 1024).toFixed(1) + ' KB';
+  fsizeEl.textContent = `${(f.size / 1024).toFixed(1)} KB`;
   goBtn.disabled = false;
-  setStatus('Ready — hit “Describe image”.', 'ok');
+  setStatus("Ready — hit “Describe image”.", "ok");
 }
 
-drop.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => selectFile(e.target.files[0]));
-['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, (e) => {
-  e.preventDefault(); drop.classList.add('drag');
-}));
-['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, (e) => {
-  e.preventDefault(); drop.classList.remove('drag');
-}));
-drop.addEventListener('drop', (e) => {
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+drop.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", (e) => selectFile(e.target.files[0]));
+["dragover", "dragenter"].forEach((ev) => {
+  drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.add("drag");
+  });
+});
+["dragleave", "drop"].forEach((ev) => {
+  drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.remove("drag");
+  })
+}
+);
+drop.addEventListener("drop", (e) => {
+  const f = e.dataTransfer.files?.[0];
   selectFile(f);
 });
 
-[toggleBoxes, toggleMasks, toggleLabels, toggleText, toggleSpotlight].forEach(el => el.addEventListener('change', redraw));
+[toggleBoxes, toggleMasks, toggleLabels, toggleText, toggleSpotlight].forEach(
+  (el) => { el.addEventListener("change", redraw) }
+);
 
-confRange.addEventListener('input', () => {
+confRange.addEventListener("input", () => {
   minScore = confRange.value / 100;
   confVal.textContent = minScore.toFixed(2);
-  const objs = (lastResult && lastResult.objects) || [];
-  const texts = (lastResult && lastResult.text) || [];
+  const objs = (lastResult?.objects) || [];
+  const texts = (lastResult?.text) || [];
   // Drop hover/selection that no longer passes so canvas + lists stay in sync.
   if (hoveredIndex >= 0 && !passesScore(objs[hoveredIndex])) hoveredIndex = -1;
-  if (selectedIndex >= 0 && !passesScore(objs[selectedIndex])) selectedIndex = -1;
-  if (hoveredTextIndex >= 0 && !passesScore(texts[hoveredTextIndex])) hoveredTextIndex = -1;
+  if (selectedIndex >= 0 && !passesScore(objs[selectedIndex]))
+    selectedIndex = -1;
+  if (hoveredTextIndex >= 0 && !passesScore(texts[hoveredTextIndex]))
+    hoveredTextIndex = -1;
   renderObjList();
   renderTextList();
   redraw();
 });
 
-copyJsonBtn.addEventListener('click', async () => {
+copyJsonBtn.addEventListener("click", async () => {
   const ok = await copyString(outEl.textContent);
   const orig = copyJsonBtn.textContent;
-  copyJsonBtn.textContent = ok ? 'Copied ✓' : 'Copy failed';
-  setTimeout(() => { copyJsonBtn.textContent = orig; }, 1200);
+  copyJsonBtn.textContent = ok ? "Copied ✓" : "Copy failed";
+  setTimeout(() => {
+    copyJsonBtn.textContent = orig;
+  }, 1200);
 });
 
-clearBtn.addEventListener('click', () => {
-  file = null; fileInput.value = '';
+clearBtn.addEventListener("click", () => {
+  file = null;
+  fileInput.value = "";
   lastResult = null;
   hoveredIndex = -1;
   selectedIndex = -1;
@@ -745,24 +830,28 @@ clearBtn.addEventListener('click', () => {
   renderTextList();
   renderDescription();
   loadedImage = null;
-  if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-  thumb.removeAttribute('src');
+  if (objectUrl) {
+    URL.revokeObjectURL(objectUrl);
+    objectUrl = null;
+  }
+  thumb.removeAttribute("src");
   thumbWrap.hidden = true;
   minScore = 0;
-  confRange.value = '0';
-  confVal.textContent = '0.00';
+  confRange.value = "0";
+  confVal.textContent = "0.00";
   goBtn.disabled = true;
   // The engine and weights stay loaded so the next image is instant.
-  previewEl.classList.remove('show');
+  previewEl.classList.remove("show");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  canvas.removeAttribute('width');
-  outEl.innerHTML = '<span class="empty">// Cleared. Pick another image.</span>';
-  timingEl.textContent = '—';
-  metaEl.textContent = '';
-  setStatus('No image selected.');
+  canvas.removeAttribute("width");
+  outEl.innerHTML =
+    '<span class="empty">// Cleared. Pick another image.</span>';
+  timingEl.textContent = "—";
+  metaEl.textContent = "";
+  setStatus("No image selected.");
 });
 
-goBtn.addEventListener('click', async () => {
+goBtn.addEventListener("click", async () => {
   if (!file || !loadedImage) return;
   goBtn.disabled = true;
   const t0 = performance.now();
@@ -771,9 +860,9 @@ goBtn.addEventListener('click', async () => {
     firstRun
       ? '<span class="spinner"></span>Loading engine + weights…'
       : '<span class="spinner"></span>Running cactus_describe in this tab…',
-    'loading'
+    "loading",
   );
-  outEl.textContent = '…';
+  outEl.textContent = "…";
   try {
     const { result, inputW, inputH } = await describeInTab(loadedImage);
     lastResult = result;
@@ -786,15 +875,27 @@ goBtn.addEventListener('click', async () => {
     await redraw();
     const dt = ((performance.now() - t0) / 1000).toFixed(2);
     outEl.textContent = JSON.stringify(result, null, 2);
-    timingEl.textContent = dt + 's';
+    timingEl.textContent = `${dt}s`;
     const n = (result.objects || []).length;
     metaEl.textContent =
-      file.name + ' → ' + n + ' object(s) · wasm on ' + inputW + '×' + inputH +
-      ' px · ' + (firstRun ? 'incl. model download, ' : '') + dt + 's';
-    setStatus('Done in ' + dt + 's — ' + n + ' object(s) boxed on canvas.', 'ok');
+      file.name +
+      " → " +
+      n +
+      " object(s) · wasm on " +
+      inputW +
+      "×" +
+      inputH +
+      " px · " +
+      (firstRun ? "incl. model download, " : "") +
+      dt +
+      "s";
+    setStatus(
+      `Done in ${dt}s — ${n} object(s) boxed on canvas.`,
+      "ok",
+    );
   } catch (err) {
-    setStatus('Error: ' + (err.message || err), 'err');
-    outEl.textContent = 'ERROR\n\n' + (err.message || err);
+    setStatus(`Error: ${err.message || err}`, "err");
+    outEl.textContent = `ERROR\n\n${err.message || err}`;
   } finally {
     goBtn.disabled = !file;
   }
