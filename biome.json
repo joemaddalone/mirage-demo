@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!wasm-app/vendor", "!wasm-app/models"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -14,7 +15,6 @@
 	},
 	"linter": {
 		"enabled": true,
-		"includes": ["**", "!wasm-app/vendor"],
 		"rules": {
 			"preset": "recommended"
 		}
