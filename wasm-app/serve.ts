@@ -40,7 +40,8 @@ async function ensureModel(): Promise<void> {
       const res = await fetch(MODEL_URL);
       if (!res.ok || !res.body)
         throw new Error(`model download failed: HTTP ${res.status}`);
-      await Bun.write(MODEL_PATH, res);
+      // Bun.write(path, Response) hangs on Bun 1.3.14; buffer it first.
+      await Bun.write(MODEL_PATH, new Uint8Array(await res.arrayBuffer()));
       console.log("mirage.cact cached in wasm-app/models/.");
     })().finally(() => {
       modelDownload = null;
@@ -55,6 +56,8 @@ function notFound(msg = "Not found"): Response {
 
 Bun.serve({
   port: PORT,
+  // First request blocks on the ~22 MB Hugging Face download; Bun's default 10s idle timeout kills it.
+  idleTimeout: 255,
   async fetch(req) {
     const url = new URL(req.url);
     if (req.method !== "GET" && req.method !== "HEAD") {
